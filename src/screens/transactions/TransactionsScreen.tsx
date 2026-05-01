@@ -15,9 +15,12 @@ import { COLORS, SPACING, RADIUS, SHADOW } from '../../utils/theme';
 import { format, addMonths, subMonths, getMonth, getYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+import { LoadingOverlay } from '../../components/common/LoadingOverlay';
+
 export default function TransactionsScreen({ navigation }: any) {
   const { transactions, categories, updateTransaction, getBalance, getMonthSummary } = useFinance();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isLoading, setIsLoading] = useState(false);
 
   const currentMonth = getMonth(currentDate);
   const currentYear = getYear(currentDate);
@@ -56,11 +59,17 @@ export default function TransactionsScreen({ navigation }: any) {
   }, [filtered]);
 
   async function togglePaidStatus(t: any) {
-    await updateTransaction({ ...t, isPaid: !t.isPaid });
+    setIsLoading(true);
+    try {
+      await updateTransaction({ ...t, isPaid: !t.isPaid });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
     <View style={styles.container}>
+      <LoadingOverlay visible={isLoading} message="Atualizando status..." />
       <StatusBar barStyle="light-content" backgroundColor={COLORS.bg} />
 
       {/* HEADER */}
