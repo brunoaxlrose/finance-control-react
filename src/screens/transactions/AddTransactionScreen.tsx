@@ -88,7 +88,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
     
     try {
       const parsedAmount = parseFloat(amount.replace(/\./g, '').replace(',', '.'));
-      const formattedDate = format(date, "yyyy-MM-dd'T'12:00:00.000'Z'");
+      const formattedDate = format(date, 'yyyy-MM-dd');
 
       const data = {
         type,

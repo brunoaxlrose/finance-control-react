@@ -128,7 +128,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   function getMonthSummary(month: number, year: number): MonthSummary {
     const filtered = transactions.filter(t => {
-      const d = new Date(t.date);
+      const d = new Date(`${t.date.substring(0,10)}T12:00:00`);
       return getMonth(d) === month && getYear(d) === year && t.isPaid !== false;
     });
     const totalIncome = filtered.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
@@ -145,7 +145,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   function getAllMonthSummaries(): MonthSummary[] {
     if (transactions.length === 0) return [];
     const months = new Set(transactions.map(t => {
-      const d = new Date(t.date);
+      const d = new Date(`${t.date.substring(0,10)}T12:00:00`);
       return `${getYear(d)}-${getMonth(d)}`;
     }));
     return Array.from(months).map(key => {

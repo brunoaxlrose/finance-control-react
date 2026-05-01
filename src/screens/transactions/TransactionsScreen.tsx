@@ -23,7 +23,7 @@ export default function TransactionsScreen({ navigation }: any) {
   const currentYear = getYear(currentDate);
   
   const filtered = transactions.filter(t => {
-    const d = new Date(t.date);
+    const d = new Date(`${t.date.substring(0,10)}T12:00:00`);
     return getMonth(d) === currentMonth && getYear(d) === currentYear;
   });
 
@@ -123,7 +123,7 @@ export default function TransactionsScreen({ navigation }: any) {
 
                   <View style={styles.contentContainer}>
                     <Text style={styles.description} numberOfLines={1}>{t.description}</Text>
-                    <Text style={styles.categoryName}>{cat?.name ?? 'Sem Categoria'} • {format(new Date(t.date), 'dd MMM', { locale: ptBR })}</Text>
+                    <Text style={styles.categoryName}>{cat?.name ?? 'Sem Categoria'} • {format(new Date(`${t.date.substring(0,10)}T12:00:00`), 'dd MMM', { locale: ptBR })}</Text>
                   </View>
 
                   <View style={styles.amountContainer}>
