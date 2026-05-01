@@ -35,22 +35,23 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     
     try {
-      // Load transactions from API
-      const rawTransactions = await api.get('/transactions');
+      const [rawTransactions, rawCategories] = await Promise.all([
+        api.get('/transactions'),
+        api.get('/categories')
+      ]);
+
       const mappedTransactions = rawTransactions.map((t: any) => ({
         ...t,
-        amount: Number(t.amount), // Garante que é um número
+        amount: Number(t.amount),
         categoryId: t.category_id,
         isPaid: t.is_paid,
         createdAt: t.created_at
       }));
       setTransactions(mappedTransactions);
 
-      // Load categories from API
-      const rawCategories = await api.get('/categories');
       const mappedCategories = rawCategories.map((c: any) => ({
         ...c,
-        isActive: c.is_active,
+        isActive: c.is_active !== false,
         createdAt: c.created_at
       }));
 

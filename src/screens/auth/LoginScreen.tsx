@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
 import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,7 +17,6 @@ import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { validateEmail, validatePassword } from '../../utils/validators';
 import { COLORS, SPACING, RADIUS } from '../../utils/theme';
-
 import { LoadingOverlay } from '../../components/common/LoadingOverlay';
 
 export default function LoginScreen({ navigation }: any) {
@@ -24,6 +25,55 @@ export default function LoginScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
+  const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
+
+  useEffect(() => {
+    checkBiometrics();
+    checkSavedCredentials();
+  }, []);
+
+  async function checkBiometrics() {
+    const compatible = await LocalAuthentication.hasHardwareAsync();
+    setIsBiometricSupported(compatible);
+  }
+
+  async function checkSavedCredentials() {
+    const savedEmail = await SecureStore.getItemAsync('user_email');
+    const savedPassword = await SecureStore.getItemAsync('user_password');
+    if (savedEmail && savedPassword) {
+      setHasSavedCredentials(true);
+      setEmail(savedEmail);
+    }
+  }
+
+  async function handleBiometricLogin() {
+    const savedEmail = await SecureStore.getItemAsync('user_email');
+    const savedPassword = await SecureStore.getItemAsync('user_password');
+
+    if (!savedEmail || !savedPassword) {
+      Toast.show({ 
+        type: 'info', 
+        text1: 'Biometria', 
+        text2: 'Faça o primeiro login com senha para ativar a biometria.' 
+      });
+      return;
+    }
+
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: 'Login com Biometria',
+      fallbackLabel: 'Usar senha',
+    });
+
+    if (result.success) {
+      setIsLoading(true);
+      const { success, message } = await signIn(savedEmail, savedPassword);
+      setIsLoading(false);
+      if (!success) {
+        Toast.show({ type: 'error', text1: 'Erro', text2: message });
+      }
+    }
+  }
 
   function validate() {
     const e = {
@@ -45,6 +95,9 @@ export default function LoginScreen({ navigation }: any) {
     if (!success) {
       Toast.show({ type: 'error', text1: 'Erro no Login', text2: message });
     } else {
+      // Save credentials for biometrics
+      await SecureStore.setItemAsync('user_email', email.trim());
+      await SecureStore.setItemAsync('user_password', password);
       Toast.show({ type: 'success', text1: 'Bem-vindo(a)!', text2: message });
     }
   }
@@ -96,12 +149,22 @@ export default function LoginScreen({ navigation }: any) {
             placeholder="Mínimo 6 caracteres"
           />
 
-          <Button
-            title="Entrar"
-            onPress={handleLogin}
-            isLoading={isLoading}
-            style={styles.btn}
-          />
+          <View style={styles.loginActions}>
+            <Button
+              title="Entrar"
+              onPress={handleLogin}
+              isLoading={isLoading}
+              style={[styles.btn, isBiometricSupported && { flex: 1, marginRight: SPACING.sm }]}
+            />
+            {isBiometricSupported && (
+              <TouchableOpacity 
+                onPress={handleBiometricLogin} 
+                style={styles.biometricBtn}
+              >
+                <Feather name="face-id" size={28} color={COLORS.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
 
           <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.link}>
             <Text style={styles.linkText}>
@@ -141,7 +204,18 @@ const styles = StyleSheet.create({
   },
   title: { color: COLORS.text, fontSize: 22, fontWeight: '700', marginBottom: 4 },
   desc: { color: COLORS.textSecondary, fontSize: 14, marginBottom: SPACING.lg },
-  btn: { marginTop: SPACING.sm },
+  loginActions: { flexDirection: 'row', alignItems: 'center', marginTop: SPACING.sm },
+  biometricBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.primary + '30',
+  },
+  btn: { flex: 1 },
   link: { marginTop: SPACING.lg, alignItems: 'center' },
   linkText: { color: COLORS.textSecondary, fontSize: 14 },
   linkHighlight: { color: COLORS.primary, fontWeight: '700' },
