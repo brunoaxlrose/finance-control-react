@@ -16,6 +16,8 @@ import { Input } from '../../components/common/Input';
 import { validateEmail, validatePassword, validateName } from '../../utils/validators';
 import { COLORS, SPACING, RADIUS } from '../../utils/theme';
 
+import { LoadingOverlay } from '../../components/common/LoadingOverlay';
+
 export default function RegisterScreen({ navigation }: any) {
   const { signUp } = useAuth();
   const [name, setName] = useState('');
@@ -60,6 +62,7 @@ export default function RegisterScreen({ navigation }: any) {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <LoadingOverlay visible={isLoading} message="Criando conta..." />
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"

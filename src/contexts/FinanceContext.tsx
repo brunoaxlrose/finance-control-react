@@ -36,19 +36,29 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     
     try {
       // Load transactions from API
-      const data = await api.get('/transactions');
-      setTransactions(data);
+      const rawTransactions = await api.get('/transactions');
+      const mappedTransactions = rawTransactions.map((t: any) => ({
+        ...t,
+        categoryId: t.category_id,
+        isPaid: t.is_paid,
+        createdAt: t.created_at
+      }));
+      setTransactions(mappedTransactions);
 
       // Load categories from API
-      const customCats = await api.get('/categories');
-      const categoryMap = new Map();
+      const rawCategories = await api.get('/categories');
+      const mappedCategories = rawCategories.map((c: any) => ({
+        ...c,
+        isActive: c.is_active,
+        createdAt: c.created_at
+      }));
       
       // Default categories
       CATEGORIES.forEach(c => categoryMap.set(c.id, { ...c, isActive: true }));
       
       // Custom categories override defaults if name/id matches
-      if (customCats) {
-        customCats.forEach((c: Category) => categoryMap.set(c.id, c));
+      if (mappedCategories) {
+        mappedCategories.forEach((c: Category) => categoryMap.set(c.id, c));
       }
       setCategories(Array.from(categoryMap.values()));
     } catch (error) {

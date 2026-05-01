@@ -16,6 +16,8 @@ import { Input } from '../../components/common/Input';
 import { validateEmail, validatePassword } from '../../utils/validators';
 import { COLORS, SPACING, RADIUS } from '../../utils/theme';
 
+import { LoadingOverlay } from '../../components/common/LoadingOverlay';
+
 export default function LoginScreen({ navigation }: any) {
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
@@ -52,6 +54,7 @@ export default function LoginScreen({ navigation }: any) {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <LoadingOverlay visible={isLoading} message="Autenticando..." />
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"

@@ -21,6 +21,8 @@ import { COLORS, SPACING, RADIUS } from '../../utils/theme';
 import { format } from 'date-fns';
 import { useNavigation } from '@react-navigation/native';
 
+import { LoadingOverlay } from '../../components/common/LoadingOverlay';
+
 interface Props {
   navigation: any;
   route: { params?: { type?: TransactionType; transaction?: any } };
@@ -83,30 +85,35 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
   async function handleSave() {
     if (!validate()) return;
     setIsLoading(true);
-    const parsedAmount = parseFloat(amount.replace(/\./g, '').replace(',', '.'));
-    const formattedDate = format(date, "yyyy-MM-dd'T'12:00:00.000'Z'");
-
-    const data = {
-      type,
-      amount: parsedAmount,
-      description: description.trim(),
-      categoryId: selectedCategory,
-      date: formattedDate,
-      isPaid,
-      isFixed,
-      isRepeated,
-    };
-
-    if (existingTransaction) {
-      await updateTransaction({ ...existingTransaction, ...data });
-      Toast.show({ type: 'success', text1: 'Sucesso!', text2: 'Lançamento atualizado.' });
-    } else {
-      await addTransaction(data);
-      Toast.show({ type: 'success', text1: 'Sucesso!', text2: 'Lançamento salvo com sucesso.' });
-    }
     
-    setIsLoading(false);
-    navigation.goBack();
+    try {
+      const parsedAmount = parseFloat(amount.replace(/\./g, '').replace(',', '.'));
+      const formattedDate = format(date, "yyyy-MM-dd'T'12:00:00.000'Z'");
+
+      const data = {
+        type,
+        amount: parsedAmount,
+        description: description.trim(),
+        categoryId: selectedCategory,
+        date: formattedDate,
+        isPaid,
+        isFixed,
+        isRepeated,
+      };
+
+      if (existingTransaction) {
+        await updateTransaction({ ...existingTransaction, ...data });
+        Toast.show({ type: 'success', text1: 'Sucesso!', text2: 'Lançamento atualizado.' });
+      } else {
+        await addTransaction(data);
+        Toast.show({ type: 'success', text1: 'Sucesso!', text2: 'Lançamento salvo com sucesso.' });
+      }
+      navigation.goBack();
+    } catch (err) {
+      Toast.show({ type: 'error', text1: 'Erro', text2: 'Falha ao salvar lançamento.' });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function handleDelete() {
@@ -125,9 +132,16 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
         onCancel: () => Toast.hide(),
         onConfirm: async () => {
           Toast.hide();
-          await removeTransaction(existingTransaction.id);
-          Toast.show({ type: 'success', text1: 'Excluído', text2: 'Lançamento apagado.' });
-          navigation.goBack();
+          setIsLoading(true);
+          try {
+            await removeTransaction(existingTransaction.id);
+            Toast.show({ type: 'success', text1: 'Excluído', text2: 'Lançamento apagado.' });
+            navigation.goBack();
+          } catch (err) {
+            Toast.show({ type: 'error', text1: 'Erro', text2: 'Falha ao excluir.' });
+          } finally {
+            setIsLoading(false);
+          }
         }
       }
     });
@@ -138,6 +152,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <LoadingOverlay visible={isLoading} message={existingTransaction ? 'Atualizando...' : 'Salvando...'} />
       <View style={styles.container}>
         {/* HEADER */}
         <View style={styles.header}>

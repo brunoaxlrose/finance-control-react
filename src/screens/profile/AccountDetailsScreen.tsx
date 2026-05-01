@@ -7,6 +7,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 
+import { LoadingOverlay } from '../../components/common/LoadingOverlay';
+
 export default function AccountDetailsScreen({ navigation }: any) {
   const { user, updatePassword } = useAuth();
   const [currentPassword, setCurrentPassword] = React.useState('');
@@ -35,6 +37,7 @@ export default function AccountDetailsScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
+      <LoadingOverlay visible={isLoading} message="Atualizando senha..." />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={COLORS.textSecondary} />
