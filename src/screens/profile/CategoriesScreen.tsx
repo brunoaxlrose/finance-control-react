@@ -11,6 +11,8 @@ import Toast from 'react-native-toast-message';
 const ICONS = ['coffee', 'shopping-bag', 'home', 'truck', 'briefcase', 'monitor', 'plus-circle', 'heart', 'tool', 'book'];
 const COLORS_LIST = ['#FF6B6B', '#6C63FF', '#00D4AA', '#FFD700', '#FF8C42', '#4D96FF', '#6BCB77', '#9D4EDD'];
 
+import { LoadingOverlay } from '../../components/common/LoadingOverlay';
+
 export default function CategoriesScreen({ navigation }: any) {
   const { categories, addCategory, updateCategory, removeCategory } = useFinance();
   const [showModal, setShowModal] = useState(false);
@@ -18,26 +20,36 @@ export default function CategoriesScreen({ navigation }: any) {
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [selectedIcon, setSelectedIcon] = useState(ICONS[0]);
   const [selectedColor, setSelectedColor] = useState(COLORS_LIST[0]);
+  const [isLoading, setIsLoading] = useState(false);
 
   async function handleAdd() {
     if (!name.trim()) {
       Toast.show({ type: 'error', text1: 'Erro', text2: 'Nome da categoria é obrigatório.' });
       return;
     }
-    await addCategory({
-      name: name.trim(),
-      type,
-      icon: selectedIcon,
-      color: selectedColor,
-      isActive: true,
-    });
-    setName('');
-    setShowModal(false);
-    Toast.show({ type: 'success', text1: 'Sucesso', text2: 'Categoria adicionada!' });
+
+    setIsLoading(true);
+    try {
+      await addCategory({
+        name: name.trim(),
+        type,
+        icon: selectedIcon,
+        color: selectedColor,
+        isActive: true,
+      });
+      setName('');
+      setShowModal(false);
+      Toast.show({ type: 'success', text1: 'Sucesso', text2: 'Categoria adicionada!' });
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Erro', text2: 'Não foi possível salvar a categoria.' });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
     <View style={styles.container}>
+      <LoadingOverlay visible={isLoading} message="Salvando categoria..." />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={COLORS.text} />
