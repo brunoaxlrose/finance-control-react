@@ -11,7 +11,7 @@ import {
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import Toast from 'react-native-toast-message';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
@@ -161,7 +161,7 @@ export default function LoginScreen({ navigation }: any) {
                 onPress={handleBiometricLogin} 
                 style={styles.biometricBtn}
               >
-                <Feather name="face-id" size={28} color={COLORS.primary} />
+                <MaterialCommunityIcons name="face-recognition" size={28} color={COLORS.primary} />
               </TouchableOpacity>
             )}
           </View>
