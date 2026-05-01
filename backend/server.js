@@ -65,7 +65,7 @@ app.post('/transactions', async (req, res) => {
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   if (authError || !user) return res.status(401).json({ error: 'Sessão inválida' });
 
-  const { amount, description, categoryId, type, date, isPaid } = req.body;
+  const { amount, description, categoryId, type, date, isPaid, installmentNumber, totalInstallments } = req.body;
   const { data, error } = await supabase
     .from('transactions')
     .insert([{ 
@@ -75,7 +75,9 @@ app.post('/transactions', async (req, res) => {
       category_id: categoryId, 
       type, 
       date: date || new Date().toISOString(),
-      is_paid: isPaid ?? false
+      is_paid: isPaid ?? false,
+      installment_number: installmentNumber,
+      total_installments: totalInstallments
     }])
     .select();
 

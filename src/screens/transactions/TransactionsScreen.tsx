@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 import { useFinance } from '../../contexts/FinanceContext';
 import { TransactionType } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
@@ -59,6 +60,16 @@ export default function TransactionsScreen({ navigation }: any) {
   }, [filtered]);
 
   async function togglePaidStatus(t: any) {
+    const isFuture = new Date(`${t.date.substring(0,10)}T12:00:00`) > new Date();
+    if (isFuture) {
+      Toast.show({ 
+        type: 'info', 
+        text1: 'Atenção', 
+        text2: 'Não é possível marcar lançamentos futuros como pagos.' 
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       await updateTransaction({ ...t, isPaid: !t.isPaid });
@@ -156,7 +167,12 @@ export default function TransactionsScreen({ navigation }: any) {
                       </View>
 
                       <View style={styles.contentContainer}>
-                        <Text style={styles.description} numberOfLines={1}>{t.description}</Text>
+                        <Text style={styles.description} numberOfLines={1}>
+                          {t.description}
+                          {t.totalInstallments && t.totalInstallments > 1 && (
+                            <Text style={styles.installmentText}> ({t.installmentNumber}/{t.totalInstallments})</Text>
+                          )}
+                        </Text>
                         <Text style={styles.categoryName}>{cat?.name ?? 'Sem Categoria'}</Text>
                       </View>
 
@@ -234,6 +250,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: { flex: 1 },
   description: { fontSize: 15, fontWeight: '700', color: COLORS.text },
+  installmentText: { fontSize: 12, fontWeight: '500', color: COLORS.primary },
   categoryName: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   amountContainer: { alignItems: 'flex-end', gap: 4 },
   amount: { fontSize: 15, fontWeight: '800' },

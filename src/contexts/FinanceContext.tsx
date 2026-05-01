@@ -45,7 +45,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         amount: Number(t.amount),
         categoryId: t.category_id,
         isPaid: t.is_paid,
-        createdAt: t.created_at
+        createdAt: t.created_at,
+        installmentNumber: t.installment_number || null,
+        totalInstallments: t.total_installments || null,
       }));
       setTransactions(mappedTransactions);
 
@@ -80,11 +82,23 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     
     try {
-      await api.post('/transactions', {
-        ...data,
-        categoryId: data.categoryId, // Já vai mapeado do formulário
-        isPaid: data.isPaid
-      });
+      const installments = data.totalInstallments || 1;
+      
+      for (let i = 0; i < installments; i++) {
+        const transactionDate = new Date(`${data.date.substring(0,10)}T12:00:00`);
+        transactionDate.setMonth(transactionDate.getMonth() + i);
+        
+        const isFuture = transactionDate > new Date();
+        
+        await api.post('/transactions', {
+          ...data,
+          date: transactionDate.toISOString().split('T')[0],
+          installmentNumber: i + 1,
+          totalInstallments: installments,
+          isPaid: (i === 0 && !isFuture) ? data.isPaid : false,
+        });
+      }
+      
       await refreshTransactions();
     } catch (error) {
       console.error('Erro ao adicionar transação:', error);

@@ -30,6 +30,8 @@ export interface Transaction {
   isPaid?: boolean;
   isFixed?: boolean;
   isRepeated?: boolean;
+  installmentNumber?: number;
+  totalInstallments?: number;
 }
 
 export interface MonthSummary {

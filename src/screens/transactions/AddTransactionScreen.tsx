@@ -47,11 +47,10 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [isLoading, setIsLoading] = useState(false);
-
-  // New Toggles
   const [isPaid, setIsPaid] = useState(existingTransaction?.isPaid ?? true);
   const [isFixed, setIsFixed] = useState(existingTransaction?.isFixed ?? false);
   const [isRepeated, setIsRepeated] = useState(existingTransaction?.isRepeated ?? false);
+  const [totalInstallments, setTotalInstallments] = useState('1');
 
   const availableCategories = categories.filter(c => (c.type === type || c.type === 'both') && c.isActive !== false);
 
@@ -93,6 +92,7 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
     try {
       const parsedAmount = parseFloat(amount.replace(/\./g, '').replace(',', '.'));
       const formattedDate = format(date, 'yyyy-MM-dd');
+      const isFuture = new Date(`${formattedDate}T12:00:00`) > new Date();
 
       const data = {
         type,
@@ -100,9 +100,9 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
         description: description.trim(),
         categoryId: selectedCategory,
         date: formattedDate,
-        isPaid,
+        isPaid: isFuture ? false : isPaid,
         isFixed,
-        isRepeated,
+        totalInstallments: isRepeated ? parseInt(totalInstallments, 10) || 1 : 1,
       };
 
       if (existingTransaction) {
@@ -245,7 +245,13 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
                 <Feather name="check-circle" size={18} color={COLORS.textSecondary} />
                 <Text style={styles.optionLabel}>{type === 'income' ? 'Recebido' : 'Pago'}</Text>
               </View>
-              <Switch value={isPaid} onValueChange={setIsPaid} trackColor={{ true: COLORS.success, false: COLORS.border }} thumbColor={COLORS.white} />
+              <Switch 
+                value={new Date(`${format(date, 'yyyy-MM-dd')}T12:00:00`) > new Date() ? false : isPaid} 
+                onValueChange={setIsPaid} 
+                disabled={new Date(`${format(date, 'yyyy-MM-dd')}T12:00:00`) > new Date()}
+                trackColor={{ true: COLORS.success, false: COLORS.border }} 
+                thumbColor={COLORS.white} 
+              />
             </View>
             <View style={styles.divider} />
             <View style={styles.optionRow}>
@@ -263,10 +269,31 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
               </View>
               <Switch value={isRepeated} onValueChange={setIsRepeated} trackColor={{ true: COLORS.primary, false: COLORS.border }} thumbColor={COLORS.white} />
             </View>
+            {isRepeated && (
+              <View style={styles.installmentInput}>
+                <Input
+                  label="Número de Parcelas"
+                  value={totalInstallments}
+                  onChangeText={setTotalInstallments}
+                  keyboardType="numeric"
+                  leftIcon="layers"
+                  placeholder="Ex: 12"
+                />
+              </View>
+            )}
           </View>
 
           {/* CATEGORIES */}
-          <Text style={styles.catLabel}>Categoria</Text>
+          <View style={styles.catHeader}>
+            <Text style={styles.catLabel}>Categoria</Text>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('Profile', { screen: 'Categories', params: { openModal: true } })}
+              style={styles.addCatBtn}
+            >
+              <Feather name="plus" size={16} color={COLORS.primary} />
+              <Text style={styles.addCatText}>Nova</Text>
+            </TouchableOpacity>
+          </View>
           {errors.category && <Text style={styles.catError}>{errors.category}</Text>}
           <View style={styles.categories}>
             {availableCategories.map((cat: Category) => {
@@ -334,7 +361,10 @@ const styles = StyleSheet.create({
   amountWrapper: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: SPACING.md },
   currencySymbol: { color: COLORS.textSecondary, fontSize: 22, fontWeight: '700', marginRight: SPACING.sm, marginTop: 12 },
   amountInput: { flex: 1, marginBottom: 0 },
-  catLabel: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: SPACING.sm },
+  catHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
+  catLabel: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  addCatBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 8, borderRadius: RADIUS.sm, backgroundColor: COLORS.primary + '15' },
+  addCatText: { color: COLORS.primary, fontSize: 12, fontWeight: '700' },
   catError: { color: COLORS.danger, fontSize: 12, marginBottom: SPACING.sm },
   categories: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.lg },
   catItem: {
@@ -351,5 +381,6 @@ const styles = StyleSheet.create({
   optionLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   optionLabel: { color: COLORS.text, fontSize: 15, fontWeight: '500' },
   divider: { height: 1, backgroundColor: COLORS.border },
+  installmentInput: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm },
   saveBtn: {},
 });

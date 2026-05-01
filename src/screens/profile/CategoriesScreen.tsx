@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, Switch } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useFinance } from '../../contexts/FinanceContext';
@@ -13,7 +13,7 @@ const COLORS_LIST = ['#FF6B6B', '#6C63FF', '#00D4AA', '#FFD700', '#FF8C42', '#4D
 
 import { LoadingOverlay } from '../../components/common/LoadingOverlay';
 
-export default function CategoriesScreen({ navigation }: any) {
+export default function CategoriesScreen({ navigation, route }: any) {
   const { categories, addCategory, updateCategory, removeCategory } = useFinance();
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
@@ -21,6 +21,13 @@ export default function CategoriesScreen({ navigation }: any) {
   const [selectedIcon, setSelectedIcon] = useState(ICONS[0]);
   const [selectedColor, setSelectedColor] = useState(COLORS_LIST[0]);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (route.params?.openModal) {
+      setShowModal(true);
+      navigation.setParams({ openModal: undefined });
+    }
+  }, [route.params?.openModal]);
 
   async function handleAdd() {
     if (!name.trim()) {
