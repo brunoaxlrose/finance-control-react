@@ -168,9 +168,19 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }
 
   async function updateCategory(cat: Category) {
-    // Note: To implement update category we need a PUT route too.
-    // For now, adding delete.
-    console.log('Update category not implemented yet');
+    if (!user) return;
+    try {
+      await api.put(`/categories/${cat.id}`, {
+        name: cat.name,
+        icon: cat.icon,
+        color: cat.color,
+        type: cat.type,
+        isActive: cat.isActive
+      });
+      await refreshTransactions();
+    } catch (error) {
+      console.error('Erro ao atualizar categoria:', error);
+    }
   }
 
   async function removeCategory(id: string) {

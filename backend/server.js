@@ -163,6 +163,25 @@ app.post('/categories', async (req, res) => {
   res.status(201).json(data[0]);
 });
 
+app.put('/categories/:id', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'Não autorizado' });
+  const token = authHeader.split(' ')[1];
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) return res.status(401).json({ error: 'Sessão inválida' });
+
+  const { name, icon, color, type, isActive } = req.body;
+  const { data, error } = await supabase
+    .from('categories')
+    .update({ name, icon, color, type, is_active: isActive })
+    .eq('id', req.params.id)
+    .eq('user_id', user.id)
+    .select();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data[0]);
+});
+
 app.delete('/categories/:id', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Não autorizado' });

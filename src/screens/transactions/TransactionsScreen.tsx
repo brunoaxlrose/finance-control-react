@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,28 @@ export default function TransactionsScreen({ navigation }: any) {
 
   function nextMonth() { setCurrentDate(addMonths(currentDate, 1)); }
   function prevMonth() { setCurrentDate(subMonths(currentDate, 1)); }
+
+  // Função para agrupar as transações por data
+  const groupedTransactions = useMemo(() => {
+    const groups: { [key: string]: typeof filtered } = {};
+    
+    // Ordenar por data (mais recente primeiro)
+    const sorted = [...filtered].sort((a, b) => {
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+
+    sorted.forEach(t => {
+      const dateKey = format(new Date(`${t.date.substring(0,10)}T12:00:00`), 'yyyy-MM-dd');
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(t);
+    });
+
+    return Object.entries(groups).map(([date, data]) => ({
+      date,
+      title: format(new Date(`${date}T12:00:00`), "EEEE, dd", { locale: ptBR }),
+      data
+    }));
+  }, [filtered]);
 
   async function togglePaidStatus(t: any) {
     await updateTransaction({ ...t, isPaid: !t.isPaid });
@@ -87,57 +109,62 @@ export default function TransactionsScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        {/* TRANSACTIONS LIST */}
+        {/* TRANSACTIONS LIST GROUPED BY DAY */}
         <View style={styles.listContainer}>
-          {filtered.length === 0 ? (
+          {groupedTransactions.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Feather name="inbox" size={48} color={COLORS.textMuted} />
               <Text style={styles.emptyText}>Nenhum lançamento encontrado</Text>
             </View>
           ) : (
-            filtered.map((t) => {
-              const cat = categories.find(c => c.id === t.categoryId);
-              const isPaid = t.isPaid !== false;
-              return (
-                <TouchableOpacity 
-                  key={t.id} 
-                  style={styles.transactionCard}
-                  onPress={() => navigation.navigate('Home', { screen: 'AddTransaction', params: { transaction: t } })}
-                  activeOpacity={0.7}
-                >
-                  <TouchableOpacity 
-                    style={styles.statusIcon} 
-                    onPress={() => togglePaidStatus(t)}
-                  >
-                    <View style={[
-                      styles.checkCircle, 
-                      isPaid && { backgroundColor: COLORS.success, borderColor: COLORS.success }
-                    ]}>
-                      {isPaid && <Feather name="check" size={12} color={COLORS.white} />}
-                    </View>
-                  </TouchableOpacity>
+            groupedTransactions.map((group) => (
+              <View key={group.date} style={styles.dayGroup}>
+                <Text style={styles.dayTitle}>{group.title}</Text>
+                {group.data.map((t) => {
+                  const cat = categories.find(c => c.id === t.categoryId);
+                  const isPaid = t.isPaid !== false;
+                  return (
+                    <TouchableOpacity 
+                      key={t.id} 
+                      style={styles.transactionCard}
+                      onPress={() => navigation.navigate('Home', { screen: 'AddTransaction', params: { transaction: t } })}
+                      activeOpacity={0.7}
+                    >
+                      <TouchableOpacity 
+                        style={styles.statusIcon} 
+                        onPress={() => togglePaidStatus(t)}
+                      >
+                        <View style={[
+                          styles.checkCircle, 
+                          isPaid && { backgroundColor: COLORS.success, borderColor: COLORS.success }
+                        ]}>
+                          {isPaid && <Feather name="check" size={12} color={COLORS.white} />}
+                        </View>
+                      </TouchableOpacity>
 
-                  <View style={[styles.iconContainer, { backgroundColor: cat?.color ?? COLORS.textMuted }]}>
-                    <Feather name={(cat?.icon as any) ?? 'help-circle'} size={18} color={COLORS.white} />
-                  </View>
+                      <View style={[styles.iconContainer, { backgroundColor: cat?.color ?? COLORS.textMuted }]}>
+                        <Feather name={(cat?.icon as any) ?? 'help-circle'} size={18} color={COLORS.white} />
+                      </View>
 
-                  <View style={styles.contentContainer}>
-                    <Text style={styles.description} numberOfLines={1}>{t.description}</Text>
-                    <Text style={styles.categoryName}>{cat?.name ?? 'Sem Categoria'} • {format(new Date(`${t.date.substring(0,10)}T12:00:00`), 'dd MMM', { locale: ptBR })}</Text>
-                  </View>
+                      <View style={styles.contentContainer}>
+                        <Text style={styles.description} numberOfLines={1}>{t.description}</Text>
+                        <Text style={styles.categoryName}>{cat?.name ?? 'Sem Categoria'}</Text>
+                      </View>
 
-                  <View style={styles.amountContainer}>
-                    <Text style={[
-                      styles.amount, 
-                      { color: t.type === 'income' ? COLORS.success : COLORS.text }
-                    ]}>
-                      {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
-                    </Text>
-                    {t.isFixed && <Feather name="repeat" size={10} color={COLORS.textMuted} />}
-                  </View>
-                </TouchableOpacity>
-              );
-            })
+                      <View style={styles.amountContainer}>
+                        <Text style={[
+                          styles.amount, 
+                          { color: t.type === 'income' ? COLORS.success : COLORS.text }
+                        ]}>
+                          {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
+                        </Text>
+                        {t.isFixed && <Feather name="repeat" size={10} color={COLORS.textMuted} />}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))
           )}
         </View>
 
@@ -203,4 +230,13 @@ const styles = StyleSheet.create({
   amount: { fontSize: 15, fontWeight: '800' },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   emptyText: { color: COLORS.textMuted, fontSize: 15, marginTop: SPACING.md },
+  dayGroup: { marginBottom: SPACING.md },
+  dayTitle: { 
+    color: COLORS.textSecondary, 
+    fontSize: 14, 
+    fontWeight: '700', 
+    marginBottom: SPACING.sm, 
+    textTransform: 'capitalize',
+    marginTop: SPACING.sm,
+  },
 });

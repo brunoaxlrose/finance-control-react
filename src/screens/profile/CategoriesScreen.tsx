@@ -47,9 +47,39 @@ export default function CategoriesScreen({ navigation }: any) {
     }
   }
 
+  async function handleToggleActive(item: any) {
+    setIsLoading(true);
+    await updateCategory({ ...item, isActive: !item.isActive });
+    setIsLoading(false);
+  }
+
+  function handleDelete(id: string) {
+    Toast.show({
+      type: 'confirm',
+      text1: 'Excluir categoria',
+      text2: 'Tem certeza? Isso pode afetar lançamentos existentes.',
+      position: 'bottom',
+      bottomOffset: 40,
+      autoHide: false,
+      props: {
+        cancelText: 'Cancelar',
+        confirmText: 'Excluir',
+        danger: true,
+        onCancel: () => Toast.hide(),
+        onConfirm: async () => {
+          Toast.hide();
+          setIsLoading(true);
+          await removeCategory(id);
+          setIsLoading(false);
+          Toast.show({ type: 'success', text1: 'Sucesso', text2: 'Categoria removida!' });
+        }
+      }
+    });
+  }
+
   return (
     <View style={styles.container}>
-      <LoadingOverlay visible={isLoading} message="Salvando categoria..." />
+      <LoadingOverlay visible={isLoading} message="Processando..." />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={COLORS.text} />
@@ -78,11 +108,11 @@ export default function CategoriesScreen({ navigation }: any) {
             <View style={styles.cardRight}>
               <Switch 
                 value={item.isActive !== false} 
-                onValueChange={() => updateCategory({ ...item, isActive: !item.isActive })}
+                onValueChange={() => handleToggleActive(item)}
                 trackColor={{ true: COLORS.primary, false: COLORS.border }}
                 thumbColor={COLORS.white}
               />
-              <TouchableOpacity onPress={() => removeCategory(item.id)} style={{ marginLeft: SPACING.md }}>
+              <TouchableOpacity onPress={() => handleDelete(item.id)} style={{ marginLeft: SPACING.md }}>
                 <Feather name="trash-2" size={18} color={COLORS.danger} />
               </TouchableOpacity>
             </View>
