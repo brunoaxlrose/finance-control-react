@@ -7,6 +7,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { COLORS, RADIUS, SPACING } from './src/utils/theme';
+import { NetworkStatus } from './src/components/common/NetworkStatus';
 
 const toastConfig = {
   success: (props: any) => (
@@ -59,6 +60,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" backgroundColor="#0F0F1A" />
+      <NetworkStatus />
       <AuthProvider>
         <AppNavigator />
       </AuthProvider>
