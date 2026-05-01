@@ -20,12 +20,16 @@ export const api = {
       body: JSON.stringify(body),
     });
 
+    const text = await response.text();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Erro na requisição');
+      try {
+        const error = JSON.parse(text);
+        throw new Error(error.error || 'Erro na requisição');
+      } catch {
+        throw new Error(text || 'Erro na requisição');
+      }
     }
-
-    return response.json();
+    return text ? JSON.parse(text) : {};
   },
 
   async put(endpoint: string, body: any) {
@@ -40,12 +44,16 @@ export const api = {
       body: JSON.stringify(body),
     });
 
+    const text = await response.text();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Erro na requisição');
+      try {
+        const error = JSON.parse(text);
+        throw new Error(error.error || 'Erro na requisição');
+      } catch {
+        throw new Error(text || 'Erro na requisição');
+      }
     }
-
-    return response.json();
+    return text ? JSON.parse(text) : {};
   },
 
   async delete(endpoint: string) {
@@ -58,12 +66,9 @@ export const api = {
       },
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Erro na requisição');
-    }
-
-    return true;
+    const text = await response.text();
+    if (!response.ok) throw new Error(text || 'Erro na requisição');
+    return text ? JSON.parse(text) : {};
   },
 
   async get(endpoint: string) {
@@ -75,11 +80,15 @@ export const api = {
       },
     });
 
+    const text = await response.text();
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Erro na requisição');
+      try {
+        const error = JSON.parse(text);
+        throw new Error(error.error || 'Erro na requisição');
+      } catch {
+        throw new Error(text || 'Erro na requisição');
+      }
     }
-
-    return response.json();
+    return text ? JSON.parse(text) : {};
   }
 };
