@@ -14,7 +14,11 @@
       "backgroundColor": "#2C2924"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.brunoaxlrose.projectfinance",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Permitir o uso do Face ID para entrar no aplicativo com segurança."
+      }
     },
     "android": {
       "adaptiveIcon": {
