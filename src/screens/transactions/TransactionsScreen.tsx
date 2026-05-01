@@ -123,7 +123,7 @@ export default function TransactionsScreen({ navigation }: any) {
 
                   <View style={styles.contentContainer}>
                     <Text style={styles.description} numberOfLines={1}>{t.description}</Text>
-                    <Text style={styles.categoryName}>{cat?.name ?? 'Sem Categoria'} • {format(new Date(t.date), 'dd MMM')}</Text>
+                    <Text style={styles.categoryName}>{cat?.name ?? 'Sem Categoria'} • {format(new Date(t.date), 'dd MMM', { locale: ptBR })}</Text>
                   </View>
 
                   <View style={styles.amountContainer}>

@@ -10,7 +10,7 @@ export function formatCurrency(value: number): string {
 
 export function formatDate(dateString: string): string {
   try {
-    return format(parseISO(dateString), "dd 'de' MMM yyyy", { locale: ptBR });
+    return format(parseISO(dateString), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   } catch {
     return dateString;
   }
