@@ -2,6 +2,7 @@
   "expo": {
     "name": "Finance BR",
     "slug": "project-finance",
+    "scheme": "projectfinance",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

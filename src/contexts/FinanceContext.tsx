@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Transaction, MonthSummary, CATEGORIES } from '../types';
-import * as Storage from '../services/storage';
+import { Transaction, MonthSummary, CATEGORIES, Category } from '../types';
+import { api } from '../services/api';
 import { useAuth } from './AuthContext';
 import { format, getMonth, getYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -34,23 +34,28 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (!user) { setTransactions([]); return; }
     setIsLoading(true);
     
-    // Load transactions
-    const data = await Storage.getTransactions(user.id);
-    const sorted = [...data].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setTransactions(sorted);
+    try {
+      // Load transactions from API
+      const data = await api.get('/transactions');
+      setTransactions(data);
 
-    // Load custom categories if any
-    const customCats = await Storage.getCategories(user.id);
-    const categoryMap = new Map();
-    // Default categories
-    CATEGORIES.forEach(c => categoryMap.set(c.id, { ...c, isActive: true }));
-    // Custom categories override defaults if ID matches
-    if (customCats) {
-      customCats.forEach(c => categoryMap.set(c.id, c));
+      // Load categories from API
+      const customCats = await api.get('/categories');
+      const categoryMap = new Map();
+      
+      // Default categories
+      CATEGORIES.forEach(c => categoryMap.set(c.id, { ...c, isActive: true }));
+      
+      // Custom categories override defaults if name/id matches
+      if (customCats) {
+        customCats.forEach((c: Category) => categoryMap.set(c.id, c));
+      }
+      setCategories(Array.from(categoryMap.values()));
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+    } finally {
+      setIsLoading(false);
     }
-    setCategories(Array.from(categoryMap.values()));
-
-    setIsLoading(false);
   }, [user]);
 
   useEffect(() => {
@@ -60,45 +65,38 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   async function addTransaction(data: Omit<Transaction, 'id' | 'userId' | 'createdAt'>) {
     if (!user) return;
     
-    const instances = (data.isFixed || data.isRepeated) ? 12 : 1;
-    const baseDate = new Date(data.date);
-
-    const baseTimestamp = Date.now();
-    for (let i = 0; i < instances; i++) {
-      const date = new Date(baseDate);
-      date.setMonth(baseDate.getMonth() + i);
-      
-      const t: Transaction = {
-        ...data,
-        id: `${baseTimestamp}_${i}`, // Unique ID for each instance
-        userId: user.id,
-        date: date.toISOString(),
-        createdAt: new Date().toISOString(),
-        // For future instances of fixed expenses, mark as not paid yet
-        isPaid: i === 0 ? data.isPaid : false,
-      };
-      await Storage.saveTransaction(t);
+    try {
+      // If it's fixed/repeated, the current backend doesn't handle multiple instances yet
+      // For now, let's just save one instance or loop through (simple version)
+      await api.post('/transactions', data);
+      await refreshTransactions();
+    } catch (error) {
+      console.error('Erro ao adicionar transação:', error);
+      throw error;
     }
-    
-    await refreshTransactions();
   }
 
   async function updateTransaction(t: Transaction) {
-    await Storage.saveTransaction(t);
-    await refreshTransactions();
+    // Note: We need a PUT route in the backend if we want to update
+    // For now, we can just log that it's not implemented yet or add it later
+    console.log('Update not implemented yet in API');
   }
 
   async function removeTransaction(id: string) {
     if (!user) return;
-    await Storage.deleteTransaction(user.id, id);
-    await refreshTransactions();
+    try {
+      await api.delete(`/transactions/${id}`);
+      await refreshTransactions();
+    } catch (error) {
+      console.error('Erro ao remover transação:', error);
+    }
   }
 
   function getBalance(): number {
     return transactions
-      .filter(t => t.isPaid !== false) // Only count if paid/received
+      .filter(t => t.isPaid !== false)
       .reduce((acc, t) => {
-        return t.type === 'income' ? acc + t.amount : acc - t.amount;
+        return t.type === 'income' ? acc + Number(t.amount) : acc - Number(t.amount);
       }, 0);
   }
 
@@ -107,8 +105,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const d = new Date(t.date);
       return getMonth(d) === month && getYear(d) === year && t.isPaid !== false;
     });
-    const totalIncome = filtered.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-    const totalExpense = filtered.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    const totalIncome = filtered.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
+    const totalExpense = filtered.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
     return {
       month: format(new Date(year, month), 'MMMM', { locale: ptBR }),
       year,
@@ -135,24 +133,22 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   async function addCategory(data: Omit<Category, 'id'>) {
     if (!user) return;
-    const newCat: Category = {
-      ...data,
-      id: Date.now().toString(),
-    };
-    await Storage.saveCategory(user.id, newCat);
-    await refreshTransactions();
+    try {
+      await api.post('/categories', data);
+      await refreshTransactions();
+    } catch (error) {
+      console.error('Erro ao adicionar categoria:', error);
+    }
   }
 
   async function updateCategory(cat: Category) {
-    if (!user) return;
-    await Storage.saveCategory(user.id, cat);
-    await refreshTransactions();
+    // Need backend support for updating categories
+    console.log('Update category not implemented yet');
   }
 
   async function removeCategory(id: string) {
-    if (!user) return;
-    await Storage.deleteCategory(user.id, id);
-    await refreshTransactions();
+    // Need backend support for deleting categories
+    console.log('Remove category not implemented yet');
   }
 
   return (

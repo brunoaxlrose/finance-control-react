@@ -11,6 +11,7 @@ interface AuthContextData {
   signUp: (name: string, email: string, password: string) => Promise<{ success: boolean; message: string }>;
   signOut: () => Promise<void>;
   updatePassword: (newPassword: string) => Promise<{ success: boolean; message: string }>;
+  sendPasswordResetEmail: (email: string) => Promise<{ success: boolean; message: string }>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -105,8 +106,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true, message: 'Senha atualizada com sucesso!' };
   }
 
+  async function sendPasswordResetEmail(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'projectfinance://reset-password', // Isso é para voltar pro app
+    });
+
+    if (error) {
+      return { success: false, message: error.message };
+    }
+
+    return { success: true, message: 'E-mail de recuperação enviado!' };
+  }
+
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signIn, signUp, signOut, updatePassword }}>
+    <AuthContext.Provider value={{ 
+      user, session, isLoading, signIn, signUp, signOut, updatePassword, sendPasswordResetEmail 
+    }}>
       {children}
     </AuthContext.Provider>
   );

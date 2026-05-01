@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-const API_URL = 'SUA_URL_DO_RENDER_AQUI'; // Ex: https://meu-backend.onrender.com
+const API_URL = 'https://finance-control-react.onrender.com'; 
 
 export const api = {
   async post(endpoint: string, body: any) {
