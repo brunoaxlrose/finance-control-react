@@ -39,7 +39,11 @@ export default function AddTransactionScreen({ navigation, route }: Props) {
   );
   const [description, setDescription] = useState(existingTransaction?.description ?? '');
   const [selectedCategory, setSelectedCategory] = useState<string>(existingTransaction?.categoryId ?? '');
-  const [date, setDate] = useState(existingTransaction ? new Date(existingTransaction.date) : new Date());
+  const [date, setDate] = useState(
+    existingTransaction 
+      ? new Date(`${existingTransaction.date.substring(0, 10)}T12:00:00`) 
+      : new Date()
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [isLoading, setIsLoading] = useState(false);
