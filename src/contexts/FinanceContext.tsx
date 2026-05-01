@@ -39,6 +39,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const rawTransactions = await api.get('/transactions');
       const mappedTransactions = rawTransactions.map((t: any) => ({
         ...t,
+        amount: Number(t.amount), // Garante que é um número
         categoryId: t.category_id,
         isPaid: t.is_paid,
         createdAt: t.created_at
@@ -52,6 +53,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         isActive: c.is_active,
         createdAt: c.created_at
       }));
+
+      const categoryMap = new Map();
       
       // Default categories
       CATEGORIES.forEach(c => categoryMap.set(c.id, { ...c, isActive: true }));
@@ -76,9 +79,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     
     try {
-      // If it's fixed/repeated, the current backend doesn't handle multiple instances yet
-      // For now, let's just save one instance or loop through (simple version)
-      await api.post('/transactions', data);
+      await api.post('/transactions', {
+        ...data,
+        categoryId: data.categoryId, // Já vai mapeado do formulário
+        isPaid: data.isPaid
+      });
       await refreshTransactions();
     } catch (error) {
       console.error('Erro ao adicionar transação:', error);
@@ -87,9 +92,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }
 
   async function updateTransaction(t: Transaction) {
-    // Note: We need a PUT route in the backend if we want to update
-    // For now, we can just log that it's not implemented yet or add it later
-    console.log('Update not implemented yet in API');
+    // Implementar se necessário futuramente
+    console.log('Update not implemented yet');
   }
 
   async function removeTransaction(id: string) {
@@ -106,7 +110,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return transactions
       .filter(t => t.isPaid !== false)
       .reduce((acc, t) => {
-        return t.type === 'income' ? acc + Number(t.amount) : acc - Number(t.amount);
+        return t.type === 'income' ? acc + t.amount : acc - t.amount;
       }, 0);
   }
 
@@ -115,8 +119,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const d = new Date(t.date);
       return getMonth(d) === month && getYear(d) === year && t.isPaid !== false;
     });
-    const totalIncome = filtered.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
-    const totalExpense = filtered.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+    const totalIncome = filtered.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+    const totalExpense = filtered.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
     return {
       month: format(new Date(year, month), 'MMMM', { locale: ptBR }),
       year,
