@@ -39,6 +39,8 @@ export default function LoginScreen({ navigation }: any) {
   }
 
   async function checkSavedCredentials() {
+    if (Platform.OS === 'web') return;
+    
     const savedEmail = await SecureStore.getItemAsync('user_email');
     const savedPassword = await SecureStore.getItemAsync('user_password');
     if (savedEmail && savedPassword) {
@@ -48,6 +50,11 @@ export default function LoginScreen({ navigation }: any) {
   }
 
   async function handleBiometricLogin() {
+    if (Platform.OS === 'web') {
+      Toast.show({ type: 'info', text1: 'Web', text2: 'Biometria disponível apenas no celular.' });
+      return;
+    }
+
     const savedEmail = await SecureStore.getItemAsync('user_email');
     const savedPassword = await SecureStore.getItemAsync('user_password');
 
@@ -95,9 +102,11 @@ export default function LoginScreen({ navigation }: any) {
     if (!success) {
       Toast.show({ type: 'error', text1: 'Erro no Login', text2: message });
     } else {
-      // Save credentials for biometrics
-      await SecureStore.setItemAsync('user_email', email.trim());
-      await SecureStore.setItemAsync('user_password', password);
+      // Save credentials for biometrics (Mobile Only)
+      if (Platform.OS !== 'web') {
+        await SecureStore.setItemAsync('user_email', email.trim());
+        await SecureStore.setItemAsync('user_password', password);
+      }
       Toast.show({ type: 'success', text1: 'Bem-vindo(a)!', text2: message });
     }
   }
@@ -156,7 +165,7 @@ export default function LoginScreen({ navigation }: any) {
               isLoading={isLoading}
               style={[styles.btn, isBiometricSupported && { flex: 1, marginRight: SPACING.sm }]}
             />
-            {isBiometricSupported && (
+            {isBiometricSupported && Platform.OS !== 'web' && (
               <TouchableOpacity 
                 onPress={handleBiometricLogin} 
                 style={styles.biometricBtn}

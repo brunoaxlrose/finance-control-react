@@ -91,7 +91,11 @@ const styles = StyleSheet.create({
     height: 52,
   },
   focused: { borderColor: COLORS.primary },
-  hasError: { borderColor: COLORS.danger },
+  hasError: { 
+    borderColor: COLORS.danger, 
+    borderWidth: 1,
+    backgroundColor: COLORS.danger + '08',
+  },
   input: {
     flex: 1,
     color: COLORS.text,
@@ -100,5 +104,11 @@ const styles = StyleSheet.create({
   },
   leftIcon: { marginRight: SPACING.sm },
   rightIcon: { marginLeft: SPACING.sm, padding: 4 },
-  error: { color: COLORS.danger, fontSize: 12, marginTop: 4 },
+  error: { 
+    color: COLORS.danger, 
+    fontSize: 12, 
+    marginTop: 4, 
+    fontWeight: '500',
+    marginLeft: 4,
+  },
 });
