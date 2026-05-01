@@ -83,6 +83,33 @@ app.post('/transactions', async (req, res) => {
   res.status(201).json(data[0]);
 });
 
+// Atualizar transação
+app.put('/transactions/:id', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'Não autorizado' });
+  const token = authHeader.split(' ')[1];
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) return res.status(401).json({ error: 'Sessão inválida' });
+
+  const { amount, description, categoryId, type, date, isPaid } = req.body;
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({ 
+      amount, 
+      description, 
+      category_id: categoryId, 
+      type, 
+      date, 
+      is_paid: isPaid 
+    })
+    .eq('id', req.params.id)
+    .eq('user_id', user.id)
+    .select();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data[0]);
+});
+
 // Deletar transação
 app.delete('/transactions/:id', async (req, res) => {
   const authHeader = req.headers.authorization;
@@ -113,7 +140,7 @@ app.get('/categories', async (req, res) => {
   const { data, error } = await supabase
     .from('categories')
     .select('*')
-    .or(`user_id.eq.${user.id},user_id.is.null`); // Pega as do usuário e as globais (se houver)
+    .or(`user_id.eq.${user.id},user_id.is.null`);
 
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
@@ -134,6 +161,23 @@ app.post('/categories', async (req, res) => {
 
   if (error) return res.status(400).json({ error: error.message });
   res.status(201).json(data[0]);
+});
+
+app.delete('/categories/:id', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'Não autorizado' });
+  const token = authHeader.split(' ')[1];
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) return res.status(401).json({ error: 'Sessão inválida' });
+
+  const { error } = await supabase
+    .from('categories')
+    .delete()
+    .eq('id', req.params.id)
+    .eq('user_id', user.id);
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.status(204).send();
 });
 
 app.listen(port, () => {

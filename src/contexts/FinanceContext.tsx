@@ -92,8 +92,20 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }
 
   async function updateTransaction(t: Transaction) {
-    // Implementar se necessário futuramente
-    console.log('Update not implemented yet');
+    if (!user) return;
+    try {
+      await api.put(`/transactions/${t.id}`, {
+        amount: t.amount,
+        description: t.description,
+        categoryId: t.categoryId,
+        type: t.type,
+        date: t.date,
+        isPaid: t.isPaid
+      });
+      await refreshTransactions();
+    } catch (error) {
+      console.error('Erro ao atualizar transação:', error);
+    }
   }
 
   async function removeTransaction(id: string) {
@@ -156,13 +168,19 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }
 
   async function updateCategory(cat: Category) {
-    // Need backend support for updating categories
+    // Note: To implement update category we need a PUT route too.
+    // For now, adding delete.
     console.log('Update category not implemented yet');
   }
 
   async function removeCategory(id: string) {
-    // Need backend support for deleting categories
-    console.log('Remove category not implemented yet');
+    if (!user) return;
+    try {
+      await api.delete(`/categories/${id}`);
+      await refreshTransactions();
+    } catch (error) {
+      console.error('Erro ao remover categoria:', error);
+    }
   }
 
   return (
