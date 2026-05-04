@@ -65,6 +65,57 @@ app.post('/auth/recover', async (req, res) => {
   }
 });
 
+app.post('/auth/password-otp-request', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'Não autorizado' });
+  
+  const token = authHeader.split(' ')[1];
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) return res.status(401).json({ error: 'Sessão inválida' });
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  try {
+    await fetch(`${process.env.UPSTASH_REDIS_REST_URL}/set/password_otp:${user.id}/${otp}/EX/600`, {
+      headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` }
+    });
+
+    res.json({ success: true, otp, message: 'Token gerado' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao gerar token no Redis' });
+  }
+});
+
+app.post('/auth/password-otp-confirm', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: 'Não autorizado' });
+  
+  const { otp, newPassword } = req.body;
+  const token = authHeader.split(' ')[1];
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) return res.status(401).json({ error: 'Sessão inválida' });
+
+  const redisRes = await fetch(`${process.env.UPSTASH_REDIS_REST_URL}/get/password_otp:${user.id}`, {
+    headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` }
+  });
+  const { result: savedOtp } = await redisRes.json();
+
+  if (!savedOtp || savedOtp !== otp) {
+    return res.status(400).json({ error: 'Token inválido ou expirado' });
+  }
+
+  const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
+    password: newPassword
+  });
+
+  if (updateError) return res.status(400).json({ error: updateError.message });
+  await fetch(`${process.env.UPSTASH_REDIS_REST_URL}/del/password_otp:${user.id}`, {
+    headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` }
+  });
+
+  res.json({ success: true, message: 'Senha alterada com sucesso!' });
+});
+
 app.get('/meus-dados', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Não autorizado' });

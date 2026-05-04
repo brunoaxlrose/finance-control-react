@@ -104,5 +104,24 @@ export const emailService = {
         </div>
       `,
     });
+  },
+
+  async sendOTP(email: string, otp: string) {
+    return this.send({
+      to: email,
+      subject: 'Seu Código de Segurança - Project Finance 🛡️',
+      html: `
+        <div style="font-family: sans-serif; color: #2C2924; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #E2001A; border-radius: 10px;">
+          <h1 style="color: #E2001A; text-align: center;">Código de Verificação</h1>
+          <p>Você solicitou uma operação sensível no Project Finance.</p>
+          <div style="background-color: #F4F1EE; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #2C2924;">${otp}</span>
+          </div>
+          <p>Este código expira em 10 minutos.</p>
+          <hr style="border: 0; border-top: 1px solid #4D473F; margin: 20px 0;">
+          <p style="font-size: 12px; color: #A8998A;">Se não foi você, mude sua senha imediatamente.</p>
+        </div>
+      `,
+    });
   }
 };

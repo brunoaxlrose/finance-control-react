@@ -15,11 +15,11 @@ interface FinanceContextData {
   getMonthSummary: (month: number, year: number) => MonthSummary;
   getAllMonthSummaries: () => MonthSummary[];
   refreshTransactions: () => Promise<void>;
-  getAlerts: () => { overdue: Transaction[]; upcoming: Transaction[] };
   categories: Category[];
   addCategory: (c: Omit<Category, 'id'>) => Promise<void>;
   updateCategory: (c: Category) => Promise<void>;
   removeCategory: (id: string) => Promise<void>;
+  getAlerts: () => { overdue: Transaction[]; upcoming: Transaction[] };
 }
 
 const FinanceContext = createContext<FinanceContextData>({} as FinanceContextData);

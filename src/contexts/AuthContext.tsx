@@ -14,6 +14,8 @@ interface AuthContextData {
   signOut: () => Promise<void>;
   updatePassword: (newPassword: string) => Promise<{ success: boolean; message: string }>;
   sendPasswordResetEmail: (email: string) => Promise<{ success: boolean; message: string }>;
+  requestPasswordOTP: () => Promise<{ success: boolean; message: string }>;
+  confirmPasswordOTP: (otp: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -141,9 +143,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function requestPasswordOTP() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://finance-control-react.onrender.com';
+      
+      const response = await fetch(`${apiUrl}/auth/password-otp-request`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao solicitar token');
+
+      // Envia o OTP via e-mail (O backend gerou e retornou o OTP para o frontend enviar via Resend)
+      if (user?.email) {
+        await emailService.sendOTP(user.email, data.otp);
+      }
+
+      return { success: true, message: 'Código enviado para seu e-mail!' };
+    } catch (error: any) {
+      return { success: false, message: translateError(error.message) };
+    }
+  }
+
+  async function confirmPasswordOTP(otp: string, newPassword: string) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://finance-control-react.onrender.com';
+      
+      const response = await fetch(`${apiUrl}/auth/password-otp-confirm`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({ otp, newPassword }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Token inválido ou expirado');
+
+      return { success: true, message: 'Senha alterada com sucesso!' };
+    } catch (error: any) {
+      return { success: false, message: translateError(error.message) };
+    }
+  }
+
   return (
     <AuthContext.Provider value={{ 
-      user, session, isLoading, signIn, signUp, signOut, updatePassword, sendPasswordResetEmail 
+      user, session, isLoading, signIn, signUp, signOut, updatePassword, 
+      sendPasswordResetEmail, requestPasswordOTP, confirmPasswordOTP 
     }}>
       {children}
     </AuthContext.Provider>
