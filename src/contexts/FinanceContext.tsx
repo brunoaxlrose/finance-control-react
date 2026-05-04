@@ -195,6 +195,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function removeCategory(id: string) {
+    if (!user) return;
+    try {
+      await api.delete(`/categories/${id}`);
+      await refreshTransactions();
+    } catch (error) {
+      console.error('Erro ao remover categoria:', error);
+    }
+  }
+
   function getAlerts() {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
