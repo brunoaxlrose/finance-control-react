@@ -29,6 +29,13 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.brunoaxlrose.projectfinance"
     },
+    "androidStatusBar": {
+      "hidden": true,
+      "translucent": true
+    },
+    "androidNavigationBar": {
+      "visible": false
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     },

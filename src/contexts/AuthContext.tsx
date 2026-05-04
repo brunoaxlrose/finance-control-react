@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User } from '../types';
 import { supabase } from '../services/supabase';
 import { Session } from '@supabase/supabase-js';
+import { translateError } from '../utils/errorHandlers';
 
 interface AuthContextData {
   user: User | null;
@@ -64,28 +65,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      return { success: false, message: error.message };
+      return { success: false, message: translateError(error) };
     }
 
     return { success: true, message: 'Login realizado com sucesso!' };
   }
 
   async function signUp(name: string, email: string, password: string) {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: name,
+    try {
+      const response = await fetch('https://finance-control-react.onrender.com/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      },
-    });
+        body: JSON.stringify({ name, email, password }),
+      });
 
-    if (error) {
-      return { success: false, message: error.message };
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao criar conta');
+      }
+
+      return await signIn(email, password);
+    } catch (error: any) {
+      return { success: false, message: translateError(error.message) };
     }
-
-    return { success: true, message: 'Conta criada com sucesso! Verifique seu e-mail.' };
   }
 
   async function signOut() {
@@ -100,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      return { success: false, message: error.message };
+      return { success: false, message: translateError(error) };
     }
 
     return { success: true, message: 'Senha atualizada com sucesso!' };
@@ -108,11 +113,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function sendPasswordResetEmail(email: string) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'projectfinance://reset-password', // Isso é para voltar pro app
+      redirectTo: 'projectfinance://reset-password',
     });
 
     if (error) {
-      return { success: false, message: error.message };
+      return { success: false, message: translateError(error) };
     }
 
     return { success: true, message: 'E-mail de recuperação enviado!' };

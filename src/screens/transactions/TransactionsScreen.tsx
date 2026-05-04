@@ -6,10 +6,12 @@ import {
   StyleSheet,
   StatusBar,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useFinance } from '../../contexts/FinanceContext';
+import { TransactionsSkeleton } from '../../components/transactions/TransactionsSkeleton';
 import { TransactionType } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 import { COLORS, SPACING, RADIUS, SHADOW } from '../../utils/theme';
@@ -19,16 +21,19 @@ import { ptBR } from 'date-fns/locale';
 import { LoadingOverlay } from '../../components/common/LoadingOverlay';
 
 export default function TransactionsScreen({ navigation }: any) {
-  const { transactions, categories, updateTransaction, getBalance, getMonthSummary } = useFinance();
+  const { transactions, categories, updateTransaction, getBalance, getMonthSummary, refreshTransactions, isLoading: isFinanceLoading } = useFinance();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const currentMonth = getMonth(currentDate);
   const currentYear = getYear(currentDate);
   
   const filtered = transactions.filter(t => {
     const d = new Date(`${t.date.substring(0,10)}T12:00:00`);
-    return getMonth(d) === currentMonth && getYear(d) === currentYear;
+    const isSameMonth = getMonth(d) === currentMonth && getYear(d) === currentYear;
+    if (t.isFixed && t.type === 'expense') return true;
+    return isSameMonth;
   });
 
   const summary = getMonthSummary(currentMonth, currentYear);
@@ -59,6 +64,16 @@ export default function TransactionsScreen({ navigation }: any) {
     }));
   }, [filtered]);
 
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await refreshTransactions();
+    setRefreshing(false);
+  }, [refreshTransactions]);
+
+  if (isFinanceLoading && transactions.length === 0) {
+    return <TransactionsSkeleton />;
+  }
+
   async function togglePaidStatus(t: any) {
     const isFuture = new Date(`${t.date.substring(0,10)}T12:00:00`) > new Date();
     if (isFuture) {
@@ -81,7 +96,6 @@ export default function TransactionsScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       <LoadingOverlay visible={isLoading} message="Atualizando status..." />
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.bg} />
 
       {/* HEADER */}
       <View style={styles.header}>
@@ -98,7 +112,20 @@ export default function TransactionsScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scroll} 
+        showsVerticalScrollIndicator={false}
+        alwaysBounceVertical={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+            progressBackgroundColor={COLORS.card}
+          />
+        }
+      >
         
         {/* SUMMARY CARDS */}
         <View style={styles.summaryContainer}>
@@ -143,47 +170,52 @@ export default function TransactionsScreen({ navigation }: any) {
                 {group.data.map((t) => {
                   const cat = categories.find(c => c.id === t.categoryId);
                   const isPaid = t.isPaid !== false;
+                  const isFuture = new Date(`${t.date.substring(0,10)}T12:00:00`) > new Date();
+                  const hasInstallments = t.totalInstallments && t.totalInstallments > 1;
                   return (
                     <TouchableOpacity 
                       key={t.id} 
-                      style={styles.transactionCard}
+                      style={[styles.transactionCard, isFuture && styles.futureCard]}
                       onPress={() => navigation.navigate('Home', { screen: 'AddTransaction', params: { transaction: t } })}
                       activeOpacity={0.7}
                     >
-                      <TouchableOpacity 
-                        style={styles.statusIcon} 
-                        onPress={() => togglePaidStatus(t)}
-                      >
-                        <View style={[
-                          styles.checkCircle, 
-                          isPaid && { backgroundColor: COLORS.success, borderColor: COLORS.success }
-                        ]}>
-                          {isPaid && <Feather name="check" size={12} color={COLORS.white} />}
-                        </View>
-                      </TouchableOpacity>
-
+                      {/* Left: icon */}
                       <View style={[styles.iconContainer, { backgroundColor: cat?.color ?? COLORS.textMuted }]}>
-                        <Feather name={(cat?.icon as any) ?? 'help-circle'} size={18} color={COLORS.white} />
+                        <Feather name={(cat?.icon as any) ?? 'help-circle'} size={20} color={COLORS.white} />
                       </View>
 
+                      {/* Middle: info */}
                       <View style={styles.contentContainer}>
                         <Text style={styles.description} numberOfLines={1}>
                           {t.description}
-                          {t.totalInstallments && t.totalInstallments > 1 && (
+                          {hasInstallments && (
                             <Text style={styles.installmentText}> ({t.installmentNumber}/{t.totalInstallments})</Text>
                           )}
                         </Text>
-                        <Text style={styles.categoryName}>{cat?.name ?? 'Sem Categoria'}</Text>
+                        <View style={styles.tagsRow}>
+                          <Text style={styles.categoryName}>{cat?.name ?? 'Sem Categoria'}</Text>
+                          {t.isFixed && (
+                            <View style={styles.tag}>
+                              <Text style={styles.tagText}>Fixa</Text>
+                            </View>
+                          )}
+                        </View>
                       </View>
 
+                      {/* Right: amount + check */}
                       <View style={styles.amountContainer}>
                         <Text style={[
                           styles.amount, 
-                          { color: t.type === 'income' ? COLORS.success : COLORS.text }
+                          { color: t.type === 'income' ? COLORS.success : isFuture ? COLORS.textSecondary : COLORS.text }
                         ]}>
                           {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
                         </Text>
-                        {t.isFixed && <Feather name="repeat" size={10} color={COLORS.textMuted} />}
+                        <TouchableOpacity 
+                          onPress={() => togglePaidStatus(t)}
+                          style={[styles.checkCircle, isPaid && !isFuture && { backgroundColor: COLORS.success, borderColor: COLORS.success }]}
+                        >
+                          {isPaid && !isFuture && <Feather name="check" size={11} color={COLORS.white} />}
+                        </TouchableOpacity>
                       </View>
                     </TouchableOpacity>
                   );
@@ -211,7 +243,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center',
     ...SHADOW.md,
   },
-  scroll: { paddingBottom: 100 },
+  scroll: { paddingBottom: 100, flexGrow: 1 },
   summaryContainer: { paddingHorizontal: SPACING.lg, marginBottom: SPACING.lg },
   summaryCard: { 
     padding: SPACING.lg, borderRadius: RADIUS.xl, marginBottom: SPACING.md,
@@ -235,34 +267,49 @@ const styles = StyleSheet.create({
   listContainer: { paddingHorizontal: SPACING.lg },
   transactionCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bgSecondary,
-    padding: SPACING.md, borderRadius: RADIUS.lg, marginBottom: SPACING.sm,
+    paddingVertical: SPACING.md, paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.lg, marginBottom: SPACING.sm,
     borderWidth: 1, borderColor: COLORS.border,
     ...SHADOW.sm,
+    gap: SPACING.sm,
   },
-  statusIcon: { marginRight: SPACING.md },
+  futureCard: {
+    opacity: 0.75,
+    borderStyle: 'dashed',
+  },
   checkCircle: { 
     width: 22, height: 22, borderRadius: 11, borderWidth: 2, 
-    borderColor: COLORS.border, justifyContent: 'center', alignItems: 'center' 
+    borderColor: COLORS.border, justifyContent: 'center', alignItems: 'center',
+    marginTop: 4,
   },
   iconContainer: { 
-    width: 40, height: 40, borderRadius: RADIUS.md, 
-    justifyContent: 'center', alignItems: 'center', marginRight: SPACING.md 
+    width: 44, height: 44, borderRadius: RADIUS.md, 
+    justifyContent: 'center', alignItems: 'center',
+    flexShrink: 0,
   },
-  contentContainer: { flex: 1 },
+  contentContainer: { flex: 1, minWidth: 0 },
   description: { fontSize: 15, fontWeight: '700', color: COLORS.text },
-  installmentText: { fontSize: 12, fontWeight: '500', color: COLORS.primary },
-  categoryName: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-  amountContainer: { alignItems: 'flex-end', gap: 4 },
-  amount: { fontSize: 15, fontWeight: '800' },
+  installmentText: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
+  tagsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' },
+  categoryName: { fontSize: 12, color: COLORS.textSecondary },
+  tag: {
+    paddingHorizontal: 6, paddingVertical: 1,
+    borderRadius: RADIUS.xs,
+    backgroundColor: COLORS.primary + '15',
+  },
+
+  amountContainer: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
+  amount: { fontSize: 14, fontWeight: '800' },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   emptyText: { color: COLORS.textMuted, fontSize: 15, marginTop: SPACING.md },
   dayGroup: { marginBottom: SPACING.md },
   dayTitle: { 
     color: COLORS.textSecondary, 
-    fontSize: 14, 
+    fontSize: 13, 
     fontWeight: '700', 
     marginBottom: SPACING.sm, 
     textTransform: 'capitalize',
     marginTop: SPACING.sm,
+    letterSpacing: 0.5,
   },
 });

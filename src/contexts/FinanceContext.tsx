@@ -15,7 +15,7 @@ interface FinanceContextData {
   getMonthSummary: (month: number, year: number) => MonthSummary;
   getAllMonthSummaries: () => MonthSummary[];
   refreshTransactions: () => Promise<void>;
-  // Categories
+  getAlerts: () => { overdue: Transaction[]; upcoming: Transaction[] };
   categories: Category[];
   addCategory: (c: Omit<Category, 'id'>) => Promise<void>;
   updateCategory: (c: Category) => Promise<void>;
@@ -58,11 +58,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }));
 
       const categoryMap = new Map();
-      
-      // Default categories
       CATEGORIES.forEach(c => categoryMap.set(c.id, { ...c, isActive: true }));
-      
-      // Custom categories override defaults if name/id matches
+
       if (mappedCategories) {
         mappedCategories.forEach((c: Category) => categoryMap.set(c.id, c));
       }
@@ -198,21 +195,39 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function removeCategory(id: string) {
-    if (!user) return;
-    try {
-      await api.delete(`/categories/${id}`);
-      await refreshTransactions();
-    } catch (error) {
-      console.error('Erro ao remover categoria:', error);
-    }
+  function getAlerts() {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    
+    const overdue: Transaction[] = [];
+    const upcoming: Transaction[] = [];
+
+    transactions.forEach(t => {
+      if (t.type === 'expense' && t.isPaid === false) {
+        const dueDate = new Date(`${t.date.substring(0,10)}T12:00:00`);
+        dueDate.setHours(0, 0, 0, 0);
+
+        if (dueDate < now) {
+          overdue.push(t);
+        } else {
+          const diffTime = dueDate.getTime() - now.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          if (diffDays <= 3) {
+            upcoming.push(t);
+          }
+        }
+      }
+    });
+
+    return { overdue, upcoming };
   }
 
   return (
     <FinanceContext.Provider value={{
       transactions, categories, isLoading, addTransaction, updateTransaction,
       removeTransaction, getBalance, getMonthSummary, getAllMonthSummaries,
-      refreshTransactions, addCategory, updateCategory, removeCategory
+      refreshTransactions, addCategory, updateCategory, removeCategory,
+      getAlerts
     }}>
       {children}
     </FinanceContext.Provider>

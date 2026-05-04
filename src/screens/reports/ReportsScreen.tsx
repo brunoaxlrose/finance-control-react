@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, StatusBar, Dimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, StatusBar, Dimensions, RefreshControl } from 'react-native';
 import { BarChart, PieChart } from 'react-native-chart-kit';
 import { useFinance } from '../../contexts/FinanceContext';
+import { ReportsSkeleton } from '../../components/reports/ReportsSkeleton';
 import { CATEGORIES } from '../../types';
 import { formatCurrency, capitalize } from '../../utils/formatters';
 import { COLORS, SPACING, RADIUS } from '../../utils/theme';
@@ -21,10 +22,21 @@ const chartConfig = {
 };
 
 export default function ReportsScreen() {
-  const { transactions, getMonthSummary, getAllMonthSummaries } = useFinance();
+  const { transactions, getMonthSummary, getAllMonthSummaries, refreshTransactions, isLoading } = useFinance();
+  const [refreshing, setRefreshing] = React.useState(false);
   const now = new Date();
   const summary = getMonthSummary(getMonth(now), getYear(now));
   const allSummaries = getAllMonthSummaries().slice(0, 6).reverse();
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await refreshTransactions();
+    setRefreshing(false);
+  }, [refreshTransactions]);
+
+  if (isLoading && transactions.length === 0) {
+    return <ReportsSkeleton />;
+  }
 
   const barData = useMemo(() => ({
     labels: allSummaries.map(s => capitalize(s.month).substring(0, 3)),
@@ -54,10 +66,22 @@ export default function ReportsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.bg} />
       <Text style={styles.pageTitle}>Relatórios</Text>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scroll}
+        alwaysBounceVertical={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+            progressBackgroundColor={COLORS.card}
+          />
+        }
+      >
         {/* MONTH SUMMARY */}
         <Text style={styles.sectionTitle}>Resumo do Mês</Text>
         <View style={styles.summaryCards}>
@@ -152,7 +176,7 @@ const styles = StyleSheet.create({
     color: COLORS.text, fontSize: 22, fontWeight: '800',
     paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg, paddingBottom: SPACING.sm,
   },
-  scroll: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxl },
+  scroll: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxl, flexGrow: 1 },
   sectionTitle: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: SPACING.md, marginTop: SPACING.md },
   summaryCards: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm },
   summaryCard: {

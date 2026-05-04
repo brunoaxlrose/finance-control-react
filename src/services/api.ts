@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { translateError } from '../utils/errorHandlers';
 
 const API_URL = 'https://finance-control-react.onrender.com'; 
 
@@ -24,9 +25,9 @@ export const api = {
     if (!response.ok) {
       try {
         const error = JSON.parse(text);
-        throw new Error(error.error || 'Erro na requisição');
+        throw new Error(translateError(error.error || 'Erro na requisição'));
       } catch {
-        throw new Error(text || 'Erro na requisição');
+        throw new Error(translateError(text || 'Erro na requisição'));
       }
     }
     return text ? JSON.parse(text) : {};
@@ -48,9 +49,9 @@ export const api = {
     if (!response.ok) {
       try {
         const error = JSON.parse(text);
-        throw new Error(error.error || 'Erro na requisição');
+        throw new Error(translateError(error.error || 'Erro na requisição'));
       } catch {
-        throw new Error(text || 'Erro na requisição');
+        throw new Error(translateError(text || 'Erro na requisição'));
       }
     }
     return text ? JSON.parse(text) : {};
@@ -67,7 +68,7 @@ export const api = {
     });
 
     const text = await response.text();
-    if (!response.ok) throw new Error(text || 'Erro na requisição');
+    if (!response.ok) throw new Error(translateError(text || 'Erro na requisição'));
     return text ? JSON.parse(text) : {};
   },
 
@@ -84,9 +85,9 @@ export const api = {
     if (!response.ok) {
       try {
         const error = JSON.parse(text);
-        throw new Error(error.error || 'Erro na requisição');
+        throw new Error(translateError(error.error || 'Erro na requisição'));
       } catch {
-        throw new Error(text || 'Erro na requisição');
+        throw new Error(translateError(text || 'Erro na requisição'));
       }
     }
     return text ? JSON.parse(text) : {};

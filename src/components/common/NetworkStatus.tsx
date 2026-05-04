@@ -52,7 +52,6 @@ export const NetworkStatus = () => {
   if (isConnected === false) {
     return (
       <Modal visible={true} animationType="fade" transparent={false}>
-        <StatusBar barStyle="light-content" backgroundColor={COLORS.bg} />
         <View style={styles.offlineContainer}>
           <View style={styles.iconCircle}>
             <Feather name="wifi-off" size={60} color={COLORS.primary} />

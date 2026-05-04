@@ -59,7 +59,7 @@ const toastConfig = {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" backgroundColor="#0F0F1A" />
+      <StatusBar style="light" hidden={true} />
       <NetworkStatus />
       <AuthProvider>
         <AppNavigator />

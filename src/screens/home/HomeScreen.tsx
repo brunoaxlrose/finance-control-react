@@ -6,23 +6,28 @@ import {
   StyleSheet,
   TouchableOpacity,
   StatusBar,
+  RefreshControl,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFinance } from '../../contexts/FinanceContext';
 import { TransactionCard } from '../../components/transactions/TransactionCard';
+import { HomeSkeleton } from '../../components/home/HomeSkeleton';
 import { formatCurrency } from '../../utils/formatters';
 import { COLORS, SPACING, RADIUS } from '../../utils/theme';
 import { getMonth, getYear } from 'date-fns';
 
 export default function HomeScreen({ navigation }: any) {
   const { user } = useAuth();
-  const { transactions, getBalance, getMonthSummary } = useFinance();
+  const { transactions, getBalance, getMonthSummary, refreshTransactions, isLoading, getAlerts } = useFinance();
+  const [refreshing, setRefreshing] = React.useState(false);
 
   const now = new Date();
   const balance = getBalance();
   const monthSummary = getMonthSummary(getMonth(now), getYear(now));
   const recent = transactions.slice(0, 5);
+  const alerts = getAlerts();
+  const totalAlertsCount = alerts.overdue.length + alerts.upcoming.length;
   const firstName = user?.name.split(' ')[0] ?? 'Usuário';
 
   const greeting = useMemo(() => {
@@ -32,10 +37,32 @@ export default function HomeScreen({ navigation }: any) {
     return 'Boa noite';
   }, []);
 
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await refreshTransactions();
+    setRefreshing(false);
+  }, [refreshTransactions]);
+
+  if (isLoading && transactions.length === 0) {
+    return <HomeSkeleton onRefresh={onRefresh} refreshing={refreshing} />;
+  }
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.bg} />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scroll}
+        alwaysBounceVertical={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+            progressBackgroundColor={COLORS.card}
+          />
+        }
+      >
 
         {/* HEADER */}
         <View style={styles.header}>
@@ -86,6 +113,44 @@ export default function HomeScreen({ navigation }: any) {
             </View>
           </View>
         </View>
+
+        {/* ALERTS SECTION */}
+        {totalAlertsCount > 0 && (
+          <View style={styles.alertSection}>
+            <View style={styles.alertHeader}>
+              <Feather name="alert-circle" size={18} color={COLORS.danger} />
+              <Text style={styles.alertTitle}>Atenção: Contas Pendentes</Text>
+            </View>
+            
+            {alerts.overdue.map(t => (
+              <TouchableOpacity 
+                key={t.id} 
+                style={[styles.alertCard, { borderLeftColor: COLORS.danger }]}
+                onPress={() => navigation.navigate('AddTransaction', { transaction: t })}
+              >
+                <View style={styles.alertInfo}>
+                  <Text style={styles.alertDesc}>{t.description}</Text>
+                  <Text style={styles.alertDate}>Vencido em {format(new Date(`${t.date.substring(0,10)}T12:00:00`), 'dd/MM')}</Text>
+                </View>
+                <Text style={[styles.alertAmount, { color: COLORS.danger }]}>{formatCurrency(t.amount)}</Text>
+              </TouchableOpacity>
+            ))}
+
+            {alerts.upcoming.map(t => (
+              <TouchableOpacity 
+                key={t.id} 
+                style={[styles.alertCard, { borderLeftColor: COLORS.warning }]}
+                onPress={() => navigation.navigate('AddTransaction', { transaction: t })}
+              >
+                <View style={styles.alertInfo}>
+                  <Text style={styles.alertDesc}>{t.description}</Text>
+                  <Text style={styles.alertDate}>Vence em {format(new Date(`${t.date.substring(0,10)}T12:00:00`), 'dd/MM')}</Text>
+                </View>
+                <Text style={[styles.alertAmount, { color: COLORS.warning }]}>{formatCurrency(t.amount)}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* QUICK ACTIONS */}
         <View style={styles.quickActions}>
@@ -160,7 +225,7 @@ export default function HomeScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  scroll: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
+  scroll: { padding: SPACING.lg, paddingBottom: SPACING.xxl, flexGrow: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: SPACING.lg },
   greeting: { color: COLORS.text, fontSize: 20, fontWeight: '700' },
   subGreeting: { color: COLORS.textSecondary, fontSize: 13, marginTop: 2 },
@@ -206,6 +271,29 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
   sectionTitle: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
   seeAll: { color: COLORS.primary, fontSize: 13, fontWeight: '600' },
+  alertSection: {
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.danger + '40',
+  },
+  alertHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm, gap: 8 },
+  alertTitle: { color: COLORS.danger, fontSize: 14, fontWeight: '700' },
+  alertCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    borderLeftWidth: 3,
+    paddingLeft: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  alertInfo: { flex: 1 },
+  alertDesc: { color: COLORS.text, fontSize: 14, fontWeight: '600' },
+  alertDate: { color: COLORS.textMuted, fontSize: 11 },
+  alertAmount: { fontSize: 14, fontWeight: '700' },
   empty: { alignItems: 'center', paddingVertical: SPACING.xxl },
   emptyText: { color: COLORS.textSecondary, fontSize: 16, fontWeight: '600', marginTop: SPACING.md },
   emptySubText: { color: COLORS.textMuted, fontSize: 13, marginTop: 4 },

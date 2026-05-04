@@ -15,6 +15,7 @@ import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { validateEmail, validatePassword, validateName } from '../../utils/validators';
 import { COLORS, SPACING, RADIUS } from '../../utils/theme';
+import { emailService } from '../../services/emailService';
 
 import { LoadingOverlay } from '../../components/common/LoadingOverlay';
 
@@ -48,6 +49,8 @@ export default function RegisterScreen({ navigation }: any) {
     setIsLoading(false);
 
     if (success) {
+      // Enviar e-mail de boas-vindas customizado (Opcional)
+      emailService.sendWelcome(email.trim(), name.trim());
       Toast.show({ type: 'success', text1: 'Conta Criada!', text2: message });
     } else {
       if (message.includes('E-mail já cadastrado')) {

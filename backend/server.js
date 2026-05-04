@@ -6,27 +6,49 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Configuração do Supabase no Backend
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Chave mestra (cuidado!)
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 app.use(cors());
 app.use(express.json());
 
-// Rota de exemplo
 app.get('/', (req, res) => {
   res.json({ message: 'Backend do Project Finance rodando!' });
 });
 
-// Exemplo de rota protegida que o Frontend chamaria
+app.post('/auth/signup', async (req, res) => {
+  const { email, password, name } = req.body;
+
+  try {
+    const { data, error } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { name }
+    });
+
+    if (error) throw error;
+
+    res.status(201).json({ 
+      success: true, 
+      user: data.user,
+      message: 'Usuário criado com sucesso' 
+    });
+  } catch (error) {
+    res.status(400).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 app.get('/meus-dados', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Não autorizado' });
 
-  const token = authHeader.split(' ')[1]; // Esse é o JWT enviado pelo Frontend
+  const token = authHeader.split(' ')[1];
   
-  // Opcional: Validar o token manualmente com o Supabase
   const { data: { user }, error } = await supabase.auth.getUser(token);
 
   if (error || !user) {
@@ -39,7 +61,6 @@ app.get('/meus-dados', async (req, res) => {
   });
 });
 
-// Listar transações do usuário
 app.get('/transactions', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Não autorizado' });
@@ -57,7 +78,6 @@ app.get('/transactions', async (req, res) => {
   res.json(data);
 });
 
-// Inserir transação
 app.post('/transactions', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Não autorizado' });
@@ -85,7 +105,6 @@ app.post('/transactions', async (req, res) => {
   res.status(201).json(data[0]);
 });
 
-// Atualizar transação
 app.put('/transactions/:id', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Não autorizado' });
@@ -112,7 +131,6 @@ app.put('/transactions/:id', async (req, res) => {
   res.json(data[0]);
 });
 
-// Deletar transação
 app.delete('/transactions/:id', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Não autorizado' });
@@ -129,8 +147,6 @@ app.delete('/transactions/:id', async (req, res) => {
   if (error) return res.status(400).json({ error: error.message });
   res.status(204).send();
 });
-
-// --- Categorias ---
 
 app.get('/categories', async (req, res) => {
   const authHeader = req.headers.authorization;
