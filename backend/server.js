@@ -43,6 +43,28 @@ app.post('/auth/signup', async (req, res) => {
   }
 });
 
+app.post('/auth/recover', async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const { data, error } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo: 'projectfinance://reset-password' }
+    });
+
+    if (error) throw error;
+
+    res.json({ 
+      success: true, 
+      link: data.properties.action_link,
+      message: 'Link de recuperação gerado' 
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
 app.get('/meus-dados', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Não autorizado' });

@@ -20,7 +20,7 @@ import { COLORS, SPACING, RADIUS } from '../../utils/theme';
 import { LoadingOverlay } from '../../components/common/LoadingOverlay';
 
 export default function LoginScreen({ navigation }: any) {
-  const { signIn } = useAuth();
+  const { signIn, sendPasswordResetEmail } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
@@ -79,6 +79,23 @@ export default function LoginScreen({ navigation }: any) {
       if (!success) {
         Toast.show({ type: 'error', text1: 'Erro', text2: message });
       }
+    }
+  }
+
+  async function handleForgotPassword() {
+    if (!validateEmail(email)) {
+      Toast.show({ type: 'error', text1: 'E-mail inválido', text2: 'Informe um e-mail válido.' });
+      return;
+    }
+    
+    setIsLoading(true);
+    const { success, message } = await sendPasswordResetEmail(email.trim());
+    setIsLoading(false);
+    
+    if (success) {
+      Toast.show({ type: 'success', text1: 'Sucesso', text2: message });
+    } else {
+      Toast.show({ type: 'error', text1: 'Erro', text2: message });
     }
   }
 
@@ -146,7 +163,7 @@ export default function LoginScreen({ navigation }: any) {
             error={errors.email}
             placeholder="seu@email.com"
           />
-          <Input
+            <Input
             label="Senha"
             value={password}
             onChangeText={setPassword}
@@ -157,6 +174,19 @@ export default function LoginScreen({ navigation }: any) {
             error={errors.password}
             placeholder="Mínimo 6 caracteres"
           />
+
+          <TouchableOpacity 
+            onPress={() => {
+              if (!email) {
+                Toast.show({ type: 'info', text1: 'E-mail necessário', text2: 'Digite seu e-mail para recuperar a senha.' });
+                return;
+              }
+              handleForgotPassword();
+            }} 
+            style={styles.forgotBtn}
+          >
+            <Text style={styles.forgotText}>Esqueci minha senha</Text>
+          </TouchableOpacity>
 
           <View style={styles.loginActions}>
             <Button
@@ -228,4 +258,6 @@ const styles = StyleSheet.create({
   link: { marginTop: SPACING.lg, alignItems: 'center' },
   linkText: { color: COLORS.textSecondary, fontSize: 14 },
   linkHighlight: { color: COLORS.primary, fontWeight: '700' },
+  forgotBtn: { alignSelf: 'flex-end', marginTop: -SPACING.sm, marginBottom: SPACING.md },
+  forgotText: { color: COLORS.primary, fontSize: 13, fontWeight: '600' },
 });

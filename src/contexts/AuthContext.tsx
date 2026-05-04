@@ -3,6 +3,7 @@ import { User } from '../types';
 import { supabase } from '../services/supabase';
 import { Session } from '@supabase/supabase-js';
 import { translateError } from '../utils/errorHandlers';
+import { emailService } from '../services/emailService';
 
 interface AuthContextData {
   user: User | null;
@@ -73,7 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signUp(name: string, email: string, password: string) {
     try {
-      const response = await fetch('https://finance-control-react.onrender.com/auth/signup', {
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://finance-control-react.onrender.com';
+      const response = await fetch(`${apiUrl}/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,19 +110,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, message: translateError(error) };
     }
 
+    if (user?.email) {
+      emailService.sendPasswordChangedNotification(user.email);
+    }
+
     return { success: true, message: 'Senha atualizada com sucesso!' };
   }
 
   async function sendPasswordResetEmail(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'projectfinance://reset-password',
-    });
+    try {
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://finance-control-react.onrender.com';
+      const response = await fetch(`${apiUrl}/auth/recover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
 
-    if (error) {
-      return { success: false, message: translateError(error) };
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao solicitar recuperação');
+      }
+
+      // Envia o e-mail customizado via Resend com o link gerado pelo Supabase
+      await emailService.sendPasswordReset(email, data.link);
+
+      return { success: true, message: 'E-mail de recuperação enviado!' };
+    } catch (error: any) {
+      return { success: false, message: translateError(error.message) };
     }
-
-    return { success: true, message: 'E-mail de recuperação enviado!' };
   }
 
   return (

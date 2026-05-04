@@ -52,6 +52,44 @@ export const emailService = {
     }
   },
 
+  async sendPasswordReset(email: string, link: string) {
+    return this.send({
+      to: email,
+      subject: 'Recuperação de Senha - Project Finance 🔐',
+      html: `
+        <div style="font-family: sans-serif; color: #2C2924; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #E2001A; border-radius: 10px;">
+          <h1 style="color: #E2001A;">Recuperação de Senha</h1>
+          <p>Você solicitou a alteração da sua senha no Project Finance.</p>
+          <p>Clique no botão abaixo para definir uma nova senha:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${link}" style="background-color: #E2001A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Alterar Senha</a>
+          </div>
+          <p style="font-size: 12px; color: #A8998A;">Se você não solicitou isso, ignore este e-mail.</p>
+          <hr style="border: 0; border-top: 1px solid #4D473F; margin: 20px 0;">
+          <p style="font-size: 12px; color: #A8998A;">Equipe Project Finance</p>
+        </div>
+      `,
+    });
+  },
+
+  async sendPasswordChangedNotification(email: string) {
+    return this.send({
+      to: email,
+      subject: 'Sua senha foi alterada! 🛡️',
+      html: `
+        <div style="font-family: sans-serif; color: #2C2924; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #E2001A; border-radius: 10px;">
+          <h1 style="color: #E2001A;">Aviso de Segurança</h1>
+          <p>Olá,</p>
+          <p>Informamos que a senha da sua conta no Project Finance foi alterada com sucesso.</p>
+          <p>Se foi você quem realizou essa alteração, pode ignorar este e-mail.</p>
+          <p><strong>Caso você não tenha solicitado essa alteração, entre em contato com nosso suporte imediatamente.</strong></p>
+          <hr style="border: 0; border-top: 1px solid #4D473F; margin: 20px 0;">
+          <p style="font-size: 12px; color: #A8998A;">Equipe Project Finance</p>
+        </div>
+      `,
+    });
+  },
+
   async sendWelcome(email: string, name: string) {
     return this.send({
       to: email,

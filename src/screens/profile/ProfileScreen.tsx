@@ -8,6 +8,7 @@ import { formatCurrency } from '../../utils/formatters';
 import { COLORS, SPACING, RADIUS } from '../../utils/theme';
 import { Card } from '../../components/common/Card';
 import { getMonth, getYear } from 'date-fns';
+import { emailService } from '../../services/emailService';
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, signOut } = useAuth();
@@ -57,6 +58,20 @@ export default function ProfileScreen({ navigation }: any) {
     });
   }
 
+  async function handleTestEmail() {
+    if (!user) return;
+    
+    Toast.show({ type: 'info', text1: 'Enviando...', text2: 'Disparando e-mail de teste...' });
+    
+    const { success, error } = await emailService.sendWelcome(user.email, user.name);
+    
+    if (success) {
+      Toast.show({ type: 'success', text1: 'E-mail Enviado!', text2: 'Verifique sua caixa de entrada.' });
+    } else {
+      Toast.show({ type: 'error', text1: 'Falha no Envio', text2: error });
+    }
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.pageTitle}>Perfil</Text>
@@ -103,6 +118,8 @@ export default function ProfileScreen({ navigation }: any) {
           <MenuItem icon="help-circle" label="Ajuda & Suporte" onPress={() => handleMenuPress('Ajuda & Suporte')} />
           <View style={styles.menuDivider} />
           <MenuItem icon="info" label="Sobre o app" onPress={() => handleMenuPress('Sobre o App')} />
+          <View style={styles.menuDivider} />
+          <MenuItem icon="mail" label="Testar E-mail (Resend)" onPress={handleTestEmail} />
         </Card>
 
         {/* VERSION */}

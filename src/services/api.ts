@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { translateError } from '../utils/errorHandlers';
 
-const API_URL = 'https://finance-control-react.onrender.com'; 
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://finance-control-react.onrender.com'; 
 
 async function getAuthToken() {
   const { data: { session } } = await supabase.auth.getSession();
